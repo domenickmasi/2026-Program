@@ -11,9 +11,8 @@ A local-first Streamlit app for ingesting scouting CSVs, validating schema quali
 - Blocks processing when required schema fields are missing and surfaces explicit error messages.
 - Computes simple per-team scouting metrics.
 - Computes advanced interpretable metrics including a ridge-estimated latent impact score.
-- Computes opponent-adjusted and readiness-oriented advanced metrics (defense suppression, value over replacement, pressure ceiling, match readiness index).
 - Supports side-by-side picklist comparison.
-- Produces early-stage red-vs-blue alliance predictions with explanation, margin projection, and Monte Carlo uncertainty bands.
+- Produces early-stage red-vs-blue alliance predictions with explanation.
 
 ## Run locally
 
@@ -57,7 +56,7 @@ See `data/sample_scouting_template.csv` for a starter template.
 3. **Picklist / Comparison**
    - Sortable ranked table and side-by-side team comparison panel.
 4. **Match Prediction**
-   - Select three red and three blue teams; view projected strengths, margin, deterministic/simulated win proxy, confidence bands, and driver factors.
+   - Select three red and three blue teams; view projected strengths, win proxy, and driver factors.
 5. **Data Health / Validation**
    - Missing required fields, suspicious values, duplicate-merge count, null audit.
 6. **Metric Dictionary**
@@ -71,14 +70,8 @@ See `data/sample_scouting_template.csv` for a starter template.
 - **Consistency/Ceiling Balance**: average output relative to peak output.
 - **Latent Match Impact (estimated)**:
   - Uses ridge-style regularized linear estimation.
-  - Feature inputs: fuel scoring, cycle efficiency, climb value, reliability, defense effectiveness, defense suppression.
+  - Feature inputs: fuel scoring, cycle efficiency, climb value, reliability, defense effectiveness.
   - Output is an **estimated impact proxy**, not objective truth.
-- **Defense Suppression**:
-  - Compares opponent alliance output in matches where a team recorded defense against event average opponent output.
-  - Positive values indicate directional evidence of defensive suppression.
-- **Match Readiness Index**:
-  - Composite of decision quality, reliability under pressure, consistency/ceiling balance, and value over replacement.
-  - Intended to support short-horizon lineup and playoff strategy decisions.
 
 ## Current limitations
 
@@ -87,7 +80,6 @@ See `data/sample_scouting_template.csv` for a starter template.
 - Missing or low-quality raw scouting data can materially bias outputs.
 - Teams with no historical rows in the loaded dataset are treated as unknown in match prediction and flagged in UI.
 - Win probability is a proxy logistic transform of modeled alliance strength difference.
-- Simulated confidence ranges assume near-Gaussian score noise and are not calibrated to official FRC scoring distributions.
 
 ## Architecture notes
 

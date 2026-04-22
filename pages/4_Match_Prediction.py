@@ -24,19 +24,10 @@ if len(red) == 3 and len(blue) == 3:
             + ", ".join(str(t) for t in pred["missing_teams"])
         )
     st.subheader("Projected Outcome")
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3 = st.columns(3)
     c1.metric("Red Projected Strength", f"{pred['red']['projected_score']:.1f}")
     c2.metric("Blue Projected Strength", f"{pred['blue']['projected_score']:.1f}")
     c3.metric("Red Win Probability", f"{pred['red_win_probability']*100:.1f}%")
-    c4.metric("Projected Margin (Red-Blue)", f"{pred['projected_margin']:.1f}")
-
-    d1, d2 = st.columns(2)
-    d1.metric("Red Sim Win Probability", f"{pred['red_win_probability_simulated']*100:.1f}%")
-    d2.metric(
-        "Score Range (10-90%)",
-        f"Red {pred['red_score_ci_10_90'][0]:.1f}-{pred['red_score_ci_10_90'][1]:.1f} | "
-        f"Blue {pred['blue_score_ci_10_90'][0]:.1f}-{pred['blue_score_ci_10_90'][1]:.1f}",
-    )
 
     st.success(f"Favored Alliance: **{pred['favored']}**")
     st.caption(pred["model_note"])
@@ -44,12 +35,5 @@ if len(red) == 3 and len(blue) == 3:
     st.markdown("### Why the model leans this way")
     for reason in pred["reasons"]:
         st.write(f"- {reason}")
-
-    st.markdown("### Factor Delta Breakdown (Red - Blue)")
-    st.dataframe(
-        {k: [v] for k, v in pred["factor_breakdown"].items()},
-        use_container_width=True,
-        hide_index=True,
-    )
 else:
     st.info("Choose exactly three teams per alliance.")

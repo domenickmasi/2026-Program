@@ -17,7 +17,7 @@ def process_uploaded_data(uploaded_bytes: bytes):
     if report.missing_required:
         return df, report, None, None
     simple = compute_simple_metrics(df)
-    advanced = compute_advanced_metrics(simple, df)
+    advanced = compute_advanced_metrics(simple)
     return df, report, simple, advanced
 
 
@@ -25,6 +25,6 @@ def process_uploaded_data(uploaded_bytes: bytes):
 def process_demo_data():
     df = generate_demo_data()
     simple = compute_simple_metrics(df)
-    advanced = compute_advanced_metrics(simple, df)
+    advanced = compute_advanced_metrics(simple)
     report = ValidationReport([], {}, 0, 0, ["Using synthetic demo dataset."])
     return df, report, simple, advanced

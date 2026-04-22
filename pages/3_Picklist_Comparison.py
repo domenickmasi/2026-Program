@@ -13,8 +13,6 @@ sort_metric = st.selectbox(
     "Sort ranking by",
     [
         "latent_match_impact",
-        "match_readiness_index",
-        "opponent_adjusted_contribution",
         "adjusted_contribution",
         "decision_quality",
         "reliability_under_pressure",
@@ -32,9 +30,7 @@ st.dataframe(
             "matches",
             "points_per_match",
             "adjusted_contribution",
-            "opponent_adjusted_contribution",
             "latent_match_impact",
-            "match_readiness_index",
             "decision_quality",
             "reliability_under_pressure",
             "consistency_ceiling_balance",
@@ -54,8 +50,6 @@ if selected:
         "fuel_accuracy",
         "climb_avg",
         "defense_effectiveness",
-        "defense_suppression",
         "decision_quality",
-        "match_readiness_index",
         "latent_match_impact",
     ]], use_container_width=True)

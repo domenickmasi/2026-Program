@@ -20,15 +20,7 @@ col3.metric("Avg Reliability", f"{advanced_df['reliability'].mean()*100:.1f}%")
 
 metric = st.selectbox(
     "Top teams by metric",
-    [
-        "latent_match_impact",
-        "opponent_adjusted_contribution",
-        "match_readiness_index",
-        "adjusted_contribution",
-        "points_per_match",
-        "decision_quality",
-        "reliability_under_pressure",
-    ],
+    ["latent_match_impact", "adjusted_contribution", "points_per_match", "decision_quality", "reliability_under_pressure"],
 )
 
 leaderboard = advanced_df.sort_values(metric, ascending=False).head(12)
@@ -55,15 +47,3 @@ fig2 = px.scatter(
 )
 fig2.update_layout(**DARK_THEME)
 st.plotly_chart(fig2, use_container_width=True)
-
-frontier = px.scatter(
-    advanced_df,
-    x="reliability_under_pressure",
-    y="pressure_ceiling",
-    color="match_readiness_index",
-    size="value_over_replacement",
-    hover_data=["team", "points_per_match", "defense_suppression"],
-    title="Reliability vs Pressure Ceiling (Bubble size = Value Over Replacement)",
-)
-frontier.update_layout(**DARK_THEME, xaxis_title="Reliability Under Pressure", yaxis_title="Pressure Ceiling")
-st.plotly_chart(frontier, use_container_width=True)

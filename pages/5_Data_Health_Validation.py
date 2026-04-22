@@ -29,15 +29,3 @@ st.json(report.mapped_columns)
 
 st.subheader("Quick Null Audit")
 st.dataframe(raw_df.isnull().sum().rename("null_count").reset_index(names="column"), use_container_width=True)
-
-st.subheader("Suspicious Value Scan")
-suspicious = raw_df[
-    (raw_df["fuel_scored"] > raw_df["fuel_attempted"])
-    | (raw_df["cycle_time"] < 0)
-    | (raw_df["auto_points"] < 0)
-    | (raw_df["teleop_points"] < 0)
-]
-if suspicious.empty:
-    st.success("No suspicious value patterns detected using current rules.")
-else:
-    st.dataframe(suspicious.head(200), use_container_width=True)

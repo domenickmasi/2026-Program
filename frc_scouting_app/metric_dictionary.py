@@ -36,19 +36,4 @@ METRIC_DICTIONARY = [
         "formula": "ridge regression estimate from fuel_scored, cycle_efficiency, climb, reliability, defense_effectiveness",
         "meaning": "Estimated true match impact signal beyond raw points; use as directional scouting input.",
     },
-    {
-        "metric": "defense_suppression",
-        "formula": "event_avg_opponent_points - avg_opponent_points_when_team_played_defense",
-        "meaning": "Directional estimate of whether a team's defense coincides with reduced opponent output.",
-    },
-    {
-        "metric": "opponent_adjusted_contribution",
-        "formula": "adjusted_contribution + 0.35*defense_suppression",
-        "meaning": "Two-way contribution estimate blending scoring with observed defensive suppression.",
-    },
-    {
-        "metric": "match_readiness_index",
-        "formula": "weighted blend of decision quality, reliability under pressure, consistency/ceiling, and value-over-replacement",
-        "meaning": "Composite match-readiness signal for near-term strategic lineup decisions.",
-    },
 ]
