@@ -2,6 +2,15 @@
 
 from __future__ import annotations
 
+APP_TITLE = "2026 FRC Scouting Dashboard"
+APP_SUBTITLE = "Team performance, picklist comparison, and match prediction tools"
+DEFAULT_EVENT_NAME = "2026 Event"
+DEFAULT_PAGE_ICON = "🤖"
+
+TEAM_COLUMN = "team"
+MATCH_COLUMN = "match"
+ALLIANCE_COLUMN = "alliance"
+
 SCHEMA_ALIASES = {
     "team": ["team", "team_number", "team_num", "frc_team", "team id"],
     "match": ["match", "match_number", "match_num", "qm"],
@@ -20,7 +29,15 @@ SCHEMA_ALIASES = {
     "match_result": ["match_result", "won", "result"],
 }
 
-REQUIRED_COLUMNS = ["team", "match", "alliance", "auto_points", "teleop_points", "fuel_scored", "fuel_attempted"]
+REQUIRED_COLUMNS = [
+    "team",
+    "match",
+    "alliance",
+    "auto_points",
+    "teleop_points",
+    "fuel_scored",
+    "fuel_attempted",
+]
 
 NUMERIC_COLUMNS = [
     "team",
@@ -62,8 +79,27 @@ ACTION_WEIGHTS = {
     "foul_penalty": -0.8,
 }
 
+PICKLIST_SCORE_COLUMNS = [
+    "team",
+    "matches_played",
+    "weighted_score",
+    "avg_total_points",
+    "fuel_accuracy",
+    "reliability_score",
+]
+
+MATCH_PREDICTION_COLUMNS = [
+    "team",
+    "weighted_score",
+    "avg_total_points",
+    "avg_auto_points",
+    "avg_teleop_points",
+    "avg_climb_points",
+]
+
 RIDGE_ALPHA = 2.5
 MIN_MATCH_SAMPLE = 3
+DEFAULT_ROUND_DIGITS = 2
 
 DARK_THEME = {
     "paper_bgcolor": "#0E1117",
@@ -71,3 +107,8 @@ DARK_THEME = {
     "font": {"color": "#E5E7EB", "size": 14},
     "title": {"font": {"size": 22}},
 }
+
+
+def get_schema_aliases(column_name: str) -> list[str]:
+    """Return accepted CSV header names for a standardized scouting column."""
+    return SCHEMA_ALIASES.get(column_name, [column_name])
