@@ -30,10 +30,12 @@ class ValidationReport:
 
 
 def _normalize_name(column_name: str) -> str:
+    """Normalize incoming CSV headers for alias matching."""
     return column_name.strip().lower().replace("-", "_").replace(" ", "_")
 
 
 def build_column_mapping(columns: List[str]) -> Tuple[Dict[str, str], List[str]]:
+    """Map uploaded CSV headers onto the canonical scouting schema."""
     normalized = {_normalize_name(c): c for c in columns}
     mapping: Dict[str, str] = {}
     warnings: List[str] = []
@@ -49,12 +51,34 @@ def build_column_mapping(columns: List[str]) -> Tuple[Dict[str, str], List[str]]
     if unmatched:
         warnings.append(f"Unmapped columns retained as extra fields: {', '.join(unmatched)}")
 
+    duplicate_targets = pd.Series(list(mapping.values())).value_counts()
+    duplicates = duplicate_targets[duplicate_targets > 1].index.tolist()
+    if duplicates:
+        warnings.append(f"Multiple source columns mapped to the same fields: {', '.join(duplicates)}")
+
     return mapping, warnings
 
 
 def _to_bool(series: pd.Series) -> pd.Series:
-    true_vals = {"1", "true", "t", "yes", "y"}
-    return series.fillna(False).astype(str).str.lower().isin(true_vals)
+    """Convert common scouting checkbox values to booleans."""
+    true_vals = {"1", "true", "t", "yes", "y", "checked"}
+    false_vals = {"0", "false", "f", "no", "n", "unchecked", ""}
+
+    cleaned = series.fillna("").astype(str).str.strip().str.lower()
+    return cleaned.where(cleaned.isin(true_vals | false_vals), "false").isin(true_vals)
+
+
+def _add_range_warnings(df: pd.DataFrame, warnings: List[str]) -> None:
+    """Append basic warnings for values that are probably data-entry mistakes."""
+    if "fuel_scored" in df.columns and "fuel_attempted" in df.columns:
+        if (df["fuel_scored"] > df["fuel_attempted"]).any():
+            warnings.append("Some rows have more fuel scored than fuel attempted.")
+
+    if "cycle_time" in df.columns and (df["cycle_time"] <= 0).any():
+        warnings.append("Some rows have zero or negative cycle times.")
+
+    if "team" in df.columns and df["team"].isna().any():
+        warnings.append("Some team numbers could not be parsed.")
 
 
 def load_and_standardize_csv(csv_file) -> Tuple[pd.DataFrame, ValidationReport]:
@@ -81,15 +105,13 @@ def load_and_standardize_csv(csv_file) -> Tuple[pd.DataFrame, ValidationReport]:
             df[col] = df[col].astype(str).str.strip().str.lower()
 
     if "team" in df.columns:
-        df["team"] = (
-            df["team"]
-            .astype(str)
-            .str.extract(r"(\d+)", expand=False)
-        )
+        df["team"] = df["team"].astype(str).str.extract(r"(\d+)", expand=False)
         df["team"] = pd.to_numeric(df["team"], errors="coerce")
 
     if "fuel_attempted" in df.columns and "fuel_scored" in df.columns:
         df["fuel_missed"] = (df["fuel_attempted"] - df["fuel_scored"]).clip(lower=0)
+
+    _add_range_warnings(df, warnings)
 
     suspicious_mask = (
         (df.get("fuel_scored", 0) > df.get("fuel_attempted", np.inf))
@@ -99,9 +121,9 @@ def load_and_standardize_csv(csv_file) -> Tuple[pd.DataFrame, ValidationReport]:
     )
     suspicious_rows = int(suspicious_mask.sum())
 
-    # Team+match+alliance represents one robot appearance; aggregate duplicates to prevent inflation.
     group_cols = [c for c in ["team", "match", "alliance"] if c in df.columns]
     before = len(df)
+
     if len(group_cols) == 3:
         aggregations = {
             "auto_points": "mean",
@@ -123,8 +145,6 @@ def load_and_standardize_csv(csv_file) -> Tuple[pd.DataFrame, ValidationReport]:
 
     duplicate_rows_merged = max(before - len(df), 0)
 
-    # Ensure all expected optional columns exist after aggregation so downstream
-    # metric computations have stable schema even when source data is sparse.
     for column, default in DEFAULT_VALUES.items():
         if column not in df.columns:
             df[column] = default
