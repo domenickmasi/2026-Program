@@ -1,0 +1,7 @@
+team,match,alliance,auto_points,teleop_points,fuel_scored,fuel_attempted,climb_points,endgame_result,fouls,breakdown,defense_played,defense_effectiveness,cycle_time,match_result
+254,1,red,12,34,18,25,10,deep,2,false,true,5,11.2,win
+971,1,red,8,28,16,24,12,deep,1,false,false,1,12.4,win
+1678,1,red,10,30,20,30,6,shallow,0,false,true,4,10.8,win
+111,1,blue,6,27,13,22,6,shallow,3,false,true,3,13.6,loss
+148,1,blue,9,25,11,21,10,deep,2,true,false,0,15.1,loss
+118,1,blue,7,31,15,27,0,none,4,false,true,2,12.9,loss
