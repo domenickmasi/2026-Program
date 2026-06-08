@@ -8,24 +8,54 @@ import pandas as pd
 from frc_scouting_app.config import ACTION_WEIGHTS, MIN_MATCH_SAMPLE, RIDGE_ALPHA
 
 
+def _numeric_series(df: pd.DataFrame, column: str, default: float = 0.0) -> pd.Series:
+    """Return a numeric column or a default-valued series when missing."""
+    if column not in df.columns:
+        return pd.Series(default, index=df.index)
+
+    return pd.to_numeric(df[column], errors="coerce").fillna(default)
+
+
+def _boolean_series(df: pd.DataFrame, column: str, default: bool = False) -> pd.Series:
+    """Return a boolean column or a default-valued series when missing."""
+    if column not in df.columns:
+        return pd.Series(default, index=df.index)
+
+    return df[column].fillna(default).astype(bool)
+
+
 def compute_simple_metrics(df: pd.DataFrame) -> pd.DataFrame:
+    """Compute per-team averages and basic scouting metrics."""
     working = df.copy()
+
+    working["auto_points"] = _numeric_series(working, "auto_points")
+    working["teleop_points"] = _numeric_series(working, "teleop_points")
+    working["fuel_scored"] = _numeric_series(working, "fuel_scored")
+    working["fuel_attempted"] = _numeric_series(working, "fuel_attempted")
+    working["climb_points"] = _numeric_series(working, "climb_points")
+    working["fouls"] = _numeric_series(working, "fouls")
+    working["cycle_time"] = _numeric_series(working, "cycle_time", 15.0)
+    working["defense_effectiveness"] = _numeric_series(working, "defense_effectiveness")
+
+    working["breakdown"] = _boolean_series(working, "breakdown")
+    working["defense_played"] = _boolean_series(working, "defense_played")
+
     working["fuel_accuracy"] = np.where(
         working["fuel_attempted"] > 0,
         working["fuel_scored"] / working["fuel_attempted"],
         0.0,
     )
+
     working["points_contribution"] = (
         working["auto_points"]
         + working["teleop_points"]
-        + working.get("climb_points", 0)
-        - working.get("fouls", 0)
+        + working["climb_points"]
+        - working["fouls"]
     )
-    working["endgame_value"] = working.get("climb_points", 0)
-    cycle_series = working["cycle_time"] if "cycle_time" in working.columns else pd.Series(15.0, index=working.index)
-    breakdown_series = working["breakdown"] if "breakdown" in working.columns else pd.Series(False, index=working.index)
-    working["cycle_efficiency"] = np.where(cycle_series > 0, 60 / cycle_series, 0)
-    working["reliability_flag"] = (~breakdown_series.astype(bool)).astype(int)
+
+    working["endgame_value"] = working["climb_points"]
+    working["cycle_efficiency"] = np.where(working["cycle_time"] > 0, 60 / working["cycle_time"], 0)
+    working["reliability_flag"] = (~working["breakdown"]).astype(int)
 
     team_simple = (
         working.groupby("team", as_index=False)
@@ -48,16 +78,31 @@ def compute_simple_metrics(df: pd.DataFrame) -> pd.DataFrame:
         )
         .fillna(0)
     )
+
     return team_simple
 
 
 def _ridge_closed_form(X: np.ndarray, y: np.ndarray, alpha: float) -> np.ndarray:
+    """Solve a small ridge regression problem for the latent impact score."""
     n_features = X.shape[1]
     reg = alpha * np.eye(n_features)
     return np.linalg.solve(X.T @ X + reg, X.T @ y)
 
 
+def _safe_ridge_impact(features: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Return ridge predictions, falling back to raw weights if solving fails."""
+    if len(y) < 2:
+        return y
+
+    try:
+        beta = _ridge_closed_form(features, y, RIDGE_ALPHA)
+        return features @ beta
+    except np.linalg.LinAlgError:
+        return y
+
+
 def compute_advanced_metrics(team_df: pd.DataFrame) -> pd.DataFrame:
+    """Compute weighted, adjusted, and model-based team metrics."""
     advanced = team_df.copy()
 
     advanced["weighted_strength"] = (
@@ -72,26 +117,22 @@ def compute_advanced_metrics(team_df: pd.DataFrame) -> pd.DataFrame:
         + advanced["fouls_avg"] * ACTION_WEIGHTS["foul_penalty"]
     )
 
-    # Decision Quality: rewards efficient shot selection plus low foul tendency.
     advanced["decision_quality"] = (
         0.55 * advanced["fuel_accuracy"]
         + 0.25 * np.tanh(advanced["cycle_efficiency"] / 5)
         + 0.2 * (1 - np.tanh(advanced["fouls_avg"]))
     ) * 100
 
-    # Reliability Under Pressure: blends uptime + volatility penalty.
     advanced["reliability_under_pressure"] = (
         100 * advanced["reliability"] * (1 / (1 + advanced["ppm_std"]))
     )
 
-    # Consistency/Ceiling balance: close to 1 means strong peak without extreme volatility.
     advanced["consistency_ceiling_balance"] = np.where(
         advanced["ppm_max"] > 0,
         (advanced["points_per_match"] / advanced["ppm_max"]).clip(0, 1),
         0,
     ) * 100
 
-    # Adjusted contribution discounts tiny sample sizes using Bayesian-style shrinkage.
     shrink = advanced["matches"] / (advanced["matches"] + MIN_MATCH_SAMPLE)
     advanced["adjusted_contribution"] = advanced["points_per_match"] * shrink
 
@@ -104,11 +145,8 @@ def compute_advanced_metrics(team_df: pd.DataFrame) -> pd.DataFrame:
             "defense_effectiveness",
         ]
     ].to_numpy()
+
     y = advanced["weighted_strength"].to_numpy()
-    if len(advanced) >= 2:
-        beta = _ridge_closed_form(features, y, RIDGE_ALPHA)
-        advanced["latent_match_impact"] = features @ beta
-    else:
-        advanced["latent_match_impact"] = advanced["weighted_strength"]
+    advanced["latent_match_impact"] = _safe_ridge_impact(features, y)
 
     return advanced.sort_values("latent_match_impact", ascending=False).reset_index(drop=True)
